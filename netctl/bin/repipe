@@ -1,0 +1,83 @@
+#!/bin/bash
+
+# Re-exec itself as given user
+NCTL_RUNAS='reconfigure'
+
+# External tool dependencies, MUST always be defined,
+# even if empty (e.g.: declare -a crt1_request_tools_list=())
+declare -a crt1_request_tools_list=(
+	'gawk'		# gawk(1)
+)
+
+# Source startup code
+. @dest@/netctl/lib/bash/crt1.sh
+
+# Source functions libraries
+. @dest@/netctl/lib/bash/libbool.sh
+. @dest@/netctl/lib/bash/librtti.sh
+. @dest@/netctl/lib/bash/libfile.sh
+. @dest@/netctl/lib/bash/liblog.sh
+. @dest@/netctl/lib/bash/libprocess.sh
+
+# Source reconfiguration library
+. @dest@/netctl/lib/bash/libreconf.sh
+
+################################################################################
+
+## If not specified in config, set this to default
+
+[ -n "$USERS_CONF" ] || USERS_CONF="$NCTL_PREFIX/etc/users.conf"
+[ -n "$USR_XML" ] || USR_XML="$REPIPE_DATADIR/usr.xml"
+
+### DO NOT EDIT BELOW THIS LINE ###
+
+## Lock subsystem: prevent from running multiple instances
+nctl_subsys_lock
+nctl_check_ok 'FAIL TO RUN "%s" SUBSYSTEM EXCLUSIVELY\n' "$NCTL_SUBSYS_NAME"
+
+__restore_original_files=n
+exit_handler()
+{
+	# cleanup before exit if failure
+	if ! nctl_is_no "$__restore_original_files"; then
+		echo '** Restoring original configuration **'
+
+		# restore configuration files
+		nctl_restore "$USR_XML" ||
+			nctl_inc_rc nctl_rc
+	fi
+
+	# remove backups
+	nctl_cleanup "$USR_XML" ||
+		nctl_inc_rc nctl_rc
+
+	# Report end
+	nctl_end_msg
+
+	## Unlock subsystem
+	nctl_subsys_unlock ||
+		nctl_inc_rc nctl_rc
+
+	exit $nctl_rc
+}
+trap 'exit_handler 2>&1 |nctl_log_pipe' EXIT
+
+# Report start
+nctl_begin_msg
+
+# Make backup of the original file(s) if needed
+nctl_log_msg 'Backup original configuration\n'
+__restore_original_files=y
+nctl_backup "$USR_XML" 2>&1 |nctl_log_pipe
+nctl_check_ok 'ERRORS WHEN BACKUP FILES\n'
+
+# Generate config(s)
+nctl_log_msg 'Generating user database file "%s" based on "%s" file\n' \
+	"$USR_XML" "$USERS_CONF"
+gawk \
+	-f "$NCTL_PREFIX/bin/usrxml.awk" \
+	"$USERS_CONF" 2>&1 >"$USR_XML" |nctl_log_pipe
+nctl_check_ok 'ERRORS ON GENERATING USER DATABASE FILE USR.XML\n'
+__restore_original_files=n
+
+exit $nctl_rc

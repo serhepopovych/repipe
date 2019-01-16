@@ -1,0 +1,98 @@
+#!/bin/bash
+
+# Re-exec itself as given user
+NCTL_RUNAS='reconfigure'
+
+# External tool dependencies, MUST always be defined,
+# even if empty (e.g.: declare -a crt1_request_tools_list=())
+declare -a crt1_request_tools_list=(
+	'wget'		# wget(1)
+	'md5sum'	# md5sum(1)
+)
+
+# Source startup code
+. @dest@/netctl/lib/bash/crt1.sh
+
+# Source functions libraries
+. @dest@/netctl/lib/bash/libbool.sh
+. @dest@/netctl/lib/bash/librtti.sh
+. @dest@/netctl/lib/bash/liblog.sh
+. @dest@/netctl/lib/bash/libprocess.sh
+
+# Source reconfiguration library
+. @dest@/netctl/lib/bash/libreconf.sh
+
+################################################################################
+
+[ -n "$SHAPERS_URL_ONE" ] || SHAPERS_URL_ONE='http://localhost/api.php?%s&shaper&%s'
+[ -n "$SHAPERS_URL_ALL" ] || SHAPERS_URL_ALL='http://localhost/api.php?%s&shaper&all'
+
+[ -n "$SHAPERS_WGET_USER_AGENT" ] || SHAPERS_WGET_USER_AGENT="GETSHAPERSYSTEM@$HOSTNAME"
+
+[ -n "$SHAPERS_WGET_ARGS" ] || SHAPERS_WGET_ARGS='-t5 --timeout=15'
+
+### DO NOT EDIT BELOW THIS LINE ###
+
+## Lock subsystem: prevent from running multiple instances
+nctl_subsys_lock
+nctl_check_ok 'FAIL TO RUN "%s" SUBSYSTEM EXCLUSIVELY\n' "$NCTL_SUBSYS_NAME"
+
+__restore_original_files=n
+exit_handler()
+{
+	# revert before exit on failure
+	if ! nctl_is_no "$__restore_original_files"; then
+		echo '** Restoring original configuration **'
+
+		# TODO: backup configuration for new shapers version
+		echo 'no configuration needed to be restored'
+	fi
+
+	# Report end
+	nctl_end_msg
+
+	## Unlock subsystem
+	nctl_subsys_unlock ||
+		nctl_inc_rc nctl_rc
+
+	exit $nctl_rc
+}
+trap 'exit_handler 2>&1 |nctl_log_pipe' EXIT
+
+# Report start
+nctl_begin_msg
+
+### Receive new shaper config
+
+# Support for old and new shapers version
+#   v2: no arguments, '' or 'all' for first argument
+#   v1: first argument specifies login
+user="$1"
+case "$user" in
+	[Aa][Ll][Ll]|'')
+		# v2
+		url="$SHAPERS_URL_ALL"
+		user=
+		;;
+	*)
+		# v1
+		url="$SHAPERS_URL_ONE"
+		;;
+esac
+set -- $user
+
+# Security: allow requests ONLY from hosts with predefined digest
+mark="$(echo -n "$SHAPERS_WGET_USER_AGENT" |md5sum)"
+mark="${mark%%[[:space:]]*}"
+
+# Log user name for v1
+[ -n "$user" ] && nctl_log_msg 'User: %s\n' "$user"
+
+# Form url
+url="$(printf "$url" "$mark" $user)"
+
+# Fetch
+wget $SHAPERS_WGET_ARGS -U "$SHAPERS_WGET_USER_AGENT" -O - -q -- "$url" 2>&1 |nctl_log_pipe_tee
+nctl_check_ok 'ERRORS WHEN RECEIVING SHAPER CONFIG FROM %s\n' "$url"
+
+exit $nctl_rc

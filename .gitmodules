@@ -1,0 +1,6 @@
+[submodule ".subprojects/libreconf"]
+	path = .subprojects/libreconf
+	url = https://github.com/serhepopovych/libreconf
+[submodule ".subprojects/libusrxml"]
+	path = .subprojects/libusrxml
+	url = https://github.com/serhepopovych/libusrxml
