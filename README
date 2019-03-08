@@ -1,0 +1,82 @@
+Helpers to get additional subscriber configuration using HTTP API
+=================================================================
+
+This is used to get subscriber shaper/policer configuration using HTTP
+API (/netctl/bin/shapers) and convert this information into XML-like
+format supported by libusrxml.
+
+Final user configuration will be put to /netctl/etc/usr.xml file.
+
+All users whose shaper/policer settings needed to be fetched must be
+added in /netctl/etc/users.conf using XML-like format:
+
+  reconfigure@localhost:~$ cat >/netctl/etc/users.conf <<EOF
+  <user WN2019011502>
+          <if eth0.4094>
+          <net 203.0.113.97/32>
+  </user>
+  EOF
+
+Data format returned from the API has following format:
+
+  zone1 dir1 bw1
+  zone1 dir2 bw2 }
+  zone2 dir1 bw3 } optional, might not be present
+  zone2 dir2 bw4 }
+  ...            }
+
+where
+  zoneX - zone name to apply bandwidth (bwZ) policy for direction (dirZ);
+          currently valid zones are:
+            local - for campus/metro/country/region/traffic
+            world - for all other traffic
+            all   - for both local and world traffic
+
+  dirY  - direction in zoneX for which bandwidth (bwZ) policy applied;
+          currently valid directions are:
+            in    - traffic that comes from zoneX
+            out   - traffic that goes to zoneX
+
+  bwZ   - bandwidth in Kbit/s for dirY and zoneX.
+
+For example:
+------------
+
+  reconfigure@localhost:~$ /netctl/bin/shapers WN2019011502
+  world     all     20480Kb
+
+  reconfigure@localhost:~$ cat /netctl/etc/users.conf
+  <user WN2019011502>
+          <if eth0.4094>
+          <net 203.0.113.97/32>
+  </user>
+
+  reconfigure@localhost:~$ /netctl/bin/repipe
+  <empty output>
+
+  reconfigure@localhost:~$ cat /netctl/etc/usr.xml
+  <user WN2019011502>
+          <pipe 1>
+                  <zone world>
+                  <dir all>
+                  <bw 20480Kb>
+          </pipe>
+          <if eth0.4094>
+          <net 203.0.113.97/32>
+  </user>
+
+Notes on custom API and/or data format:
+---------------------------------------
+
+  1) When custom API communication needed to be implemented you should
+     modify /netctl/bin/shapers.
+
+  2) When custom data format is used you should modify
+     /netctl/bin/usrxml.awk
+
+Further information:
+--------------------
+
+See libusrxml project at https://github.com/serhepopovych/libusrxml for
+more information on XML-like data format used, API used to process it
+and helper utilities (users_xml2lst.awk and users_lst2xml.awk) usage.
