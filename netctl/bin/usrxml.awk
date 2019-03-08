@@ -1,7 +1,7 @@
 #!/usr/bin/gawk -f
 
 # Source USRXML database parsing library.
-@include "@dest@/netctl/lib/awk/libusrxml.awk"
+@include "@target@/netctl/lib/awk/libusrxml.awk"
 
 ################################################################################
 
@@ -30,7 +30,7 @@ END{
 
 	for (userid = 0; userid < USRXML_nusers; userid++) {
 		pipeid = 0;
-		cmd = "@dest@/netctl/bin/shapers "USRXML_usernames[userid];
+		cmd = "@target@/netctl/bin/shapers "USRXML_usernames[userid];
 		while ((ret = (cmd | getline line)) > 0) {
 			nfields = split(line, a, " ");
 			if (nfields == 3) {
