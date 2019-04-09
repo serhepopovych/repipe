@@ -39,9 +39,9 @@ END{
 				# Skip "Kb" at the end
 				sub(/Kb$/, "", a[3]);
 
-				USRXML_userpipezone[userid,pipeid] = a[1];
-				USRXML_userpipedir[userid,pipeid] = a[2];
-				USRXML_userpipebw[userid,pipeid] = a[3];
+				USRXML_userpipe[userid,pipeid,"zone"] = a[1];
+				USRXML_userpipe[userid,pipeid,"dir"] = a[2];
+				USRXML_userpipe[userid,pipeid,"bw"] = a[3];
 			} else if (nfields == 0) {
 				## No fields: may be empty line, skip
 				continue;
