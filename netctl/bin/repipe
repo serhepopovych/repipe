@@ -75,8 +75,9 @@ nctl_check_ok 'ERRORS WHEN BACKUP FILES\n'
 nctl_log_msg 'Generating user database file "%s" based on "%s" file\n' \
 	"$USR_XML" "$USERS_CONF"
 gawk \
-	-f "$NCTL_PREFIX/bin/usrxml.awk" \
-	"$USERS_CONF" 2>&1 >"$USR_XML" |nctl_log_pipe
+	-v fout="$USR_XML" \
+	-f "$NCTL_PREFIX/bin/pipe.awk" \
+	"$USERS_CONF" 2>&1 |nctl_log_pipe
 nctl_check_ok 'ERRORS ON GENERATING USER DATABASE FILE USR.XML\n'
 __restore_original_files=n
 
