@@ -9,7 +9,7 @@ BEGIN{
 	##
 	## Initialize user database parser.
 	##
-	h = init_usrxml_parser("pipe.awk");
+	h = init_usrxml_parser("pipe.awk", 1);
 	if (h < 0)
 		exit 1;
 }
