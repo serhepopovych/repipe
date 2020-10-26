@@ -86,9 +86,10 @@ END{
 				## Valid policy in format: "zone dir bw", apply
 
 				# Translate units to kbit (default is kbit)
-				unit = tolower(a[3]);
+				unit = a[3];
 				sub("^[[:digit:]]+", "", unit);
 				sub(unit "$", "", a[3]);
+				unit = toupper(unit);
 
 				if (unit in units)
 					a[3] *= units[unit] / units["kbit"];
@@ -97,7 +98,7 @@ END{
 				if (a[1] != "world" && a[1] != "all")
 					a[1] = "local";
 
-				p = USRXML_userpipe[i]++;
+				p = ++USRXML_userpipe[i];
 
 				# h,userid,pipeid
 				j = i SUBSEP p;
