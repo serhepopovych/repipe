@@ -98,12 +98,12 @@ END{
 				if (a[1] != "world" && a[1] != "all")
 					a[1] = "local";
 
-				p = ++USRXML_userpipe[i];
+				p = USRXML_userpipe[i]++;
 
 				# h,userid,pipeid
 				j = i SUBSEP p;
 
-				USRXML_userpipe[j] = p;
+				USRXML_userpipe[j] = p + 1;
 				USRXML_userpipe[j,"zone"] = a[1];
 				USRXML_userpipe[j,"dir"] = a[2];
 				USRXML_userpipe[j,"bw"] = a[3];
